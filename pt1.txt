@@ -1,0 +1,28 @@
+Token = "YourToken" #@param {type:"string"}
+!pip install torch safetensors
+!pip install pytorch_lightning
+!pip install wget
+
+import requests
+
+import os
+%cd /content/
+!git clone https://github.com/Faildes/merge-models
+if not os.path.exists("/content/models"):
+  os.mkdir("/content/models")
+if not os.path.exists("/content/vae"):
+  os.mkdir("/content/vae")
+
+def custom_model(url, checkpoint_name, format=0):
+  user_token = Token
+  user_header = f"\"Authorization: Bearer {user_token}\""
+  ext = ""
+  if format == 0:
+    ext = "ckpt"
+  elif format == 1:
+    ext = "safetensors"
+  if "huggingface" in url:
+    !wget -c --header={user_header} {url} -O /content/models/{checkpoint_name}.{ext}
+  else:
+    !wget -c -O /content/models/{checkpoint_name}.{ext} {url}
+
