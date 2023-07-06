@@ -5,14 +5,68 @@ import re
 
 filedict = {}
 pruned={}
-in_data = ""
-def select_models(out, num, intr, safe=False, reject_tag=None, rej_name=None):
+
+def select_models(out, ids, intr, safe=False, reject_tag=None, rej_name=None):
     global filedict
     global pruned
-    global in_data
+    pr = 0
+    h = 0.0
+    with open(intr,mode="r") as ss:
+        with open(out,mode="a+",errors="ignore") as oss:
+            k = json.load(ss)
+            for idm in ids:
+                st = k.pop(str(idm))
+                model_link = f"https://civitai.com/models/{str(idm)}/"
+                name = st["name"]
+                if rej_name is not None:
+                    if any([re.search(s, name, flags=re.IGNORECASE) for s in rej_name]):
+                        continue
+                tag=st["tags"]
+                if reject_tag is not None:
+                    if type(reject_tag) is str:
+                        if reject_tag in tag:
+                            continue
+                    elif type(reject_tag) is list:
+                        if set(tag) & set(reject_tag):
+                            continue
+                version = st["model_versions_name"]
+                url = st["model_versions_download_url"]
+                size = st["model_versions_files_size_kb"]
+                if float(size) >= 7000000.000000000:
+                    continue
+                h += float(size)
+                if h >= 70000000.000000000:
+                    print("Size is big")
+                    break
+                form = st["model_versions_files_format"]["format"]
+                if form != "SafeTensor" and safe:
+                    continue
+                author = st["creator_username"]
+                author_url = f"https://civitai.com/user/{author}"
+                terf = f"[{name}-{version}]({model_link}) by [{author}]({author_url})\n"
+                oss.write(terf)
+                if form == "SafeTensor":
+                    safetensors = 1
+                else:
+                    safetensors = 0
+                name = re.sub(r"[ \(\)\'\"]","",name)
+                version = re.sub(r"[ \(\)\'\"]","",version)
+                if size >= 3000000.000000000:
+                    pr += 1
+                    pruned[f"{name}-{version}"] = [url,f"{name}-{version}-pruned",safetensors]
+                    safetensors = 1
+                    version = f"{version}-pruned"
+                if safetensors == 1:
+                    filedict[f"{name}-{version}"] = [url, f"{name}-{version}.safetensors",model_link]
+                else:
+                    filedict[f"{name}-{version}"] = [url, f"{name}-{version}.ckpt",model_link]
+            oss.write("\n\n")
+            
+def select_models_rd(out, num, intr, safe=False, reject_tag=None, rej_name=None):
+    global filedict
+    global pruned
     i = 0
     pr = 0
-    in_data = intr
     h = 0.0
     with open(intr,mode="r") as ss:
         with open(out,mode="a+",errors="ignore") as oss:
@@ -147,7 +201,7 @@ def make_script(vae, index, dicted, final, out):
         op.write(forge)
     return form, exec_fin, dicted
 
-def make_code(vae, vae_url, output, output1, final_name, numi=None, inter=None, safer=False, rej_tag=None, rej_name=None):
+def make_code(vae, vae_url, output, output1, final_name, numi=None, inter=None, safer=False, rej_tag=None, rej_name=None,Token="YourToken",NameRepo="Name/Repo"):
     global filedict
     i = 0
     finale = False
@@ -155,12 +209,17 @@ def make_code(vae, vae_url, output, output1, final_name, numi=None, inter=None, 
         os.remove(os.path.join(os.getcwd(),output))
     if os.path.exists(os.path.join(os.getcwd(),output1)):
         os.remove(os.path.join(os.getcwd(),output1))
-    if (numi is not None) and (inter is not None):
-        select_models(output1,num=numi, intr=inter, safe=safer, reject_tag=rej_tag, rej_name=rej_name)
+    if type(numi) == int:
+        select_models_rd(output1,num=numi, intr=inter, safe=safer, reject_tag=rej_tag, rej_name=rej_name)
+        count = numi
+    elif type(numi) == list:
+        select_models(output1,ids=numi, intr=inter, safe=safer, reject_tag=rej_tag, rej_name=rej_name)
+        count = len(numi)
     with open(output, mode="a+", errors="ignore") as ou:
         with open("pt1.txt", mode="r", errors="ignore") as kts:
             erm = kts.read()
             while erm:
+                erm = erm.replace("YourToken",Token)
                 ou.write(erm)
                 erm = kts.read()
         for key, base in filedict.items():
@@ -192,16 +251,20 @@ def make_code(vae, vae_url, output, output1, final_name, numi=None, inter=None, 
             scr, finale, filedict = make_script(vae, i, filedict, final_name, output1)
             ou.write(scr)
             i += 1
-        fix = f"!python merge.py \"RM\" \"/content/models/\" \\\n\"{final_name}.safetensors\" None --output \"{final_name}\"\n!pip cache purge\n\n"
+        fix = f"!python merge.py \"RM\" \"/content/models/\" \\\n\"{final_name}.safetensors\" None --output \"{final_name}-recipe\"\n!pip cache purge\n\n"
         fix+= "!pip install --upgrade huggingface_hub\n\nModel_Directory = \"/content/models/\" #@param {type:\"string\"}\n"
         fix += f"HF_File_Name = \"{final_name}\""
         fix += "#@param {type:\"string\"}\n"
-        fix += f"Output_File = {final_name}.safetensors\nUpload_File = Model_Directory + Output_File\n"
-        fix += "User_Repository =\"Name/Repo\"  #@param {type:\"string\"}\n"
-        fix += f"Output_File_1 = \"{final_name}.json\"\n"
+        fix += f"Output_File = \"{final_name}.safetensors\"\nUpload_File = Model_Directory + Output_File\n"
+        fix += f"User_Repository =\"{NameRepo}\""
+        fix += " #@param {type:\"string\"}\n"
+        fix += f"Output_File_1 = \"{final_name}-recipe.json\"\n"
         fix += "Upload_File_1 = f\"/content/merge-models/{Output_File_1}\"\n\n"
         fix += "%cd \{Model_Directory}\n\nfrom huggingface_hub import upload_file\nupload_file(path_or_fileobj=Upload_File, path_in_repo=Output_File, repo_id=User_Repository, token=Token)\nupload_file(path_or_fileobj=Upload_File_1, path_in_repo=Output_File_1, repo_id=User_Repository, token=Token)"
         ou.write(fix)
-    print(f"Write mergition of {final_name} Using {numi} models Successfully!")
-hsg = random.randint(10,27)        
-make_code("vae-ft-mse-840000-ema-pruned.safetensors", "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors","scripts.txt","mergitions.txt","RandomAttempt",hsg, "dump.json")
+    print(f"Write mergition of {final_name} Using {count} models Successfully!")
+#hsg = random.randint(10,27)
+
+make_code("vae-ft-mse-840000-ema-pruned.safetensors", "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors",\
+          "scripts.txt","mergitions.txt","LunaMixV2RAND",list(set([91837,91662,87533,29422,93529,88536,43331,10028,72745,47274,22402,58772,94725,81304,93589,94179,83766,52602,45757,33918])), \
+          "dump.json",Token="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", NameRepo="Chattiori/LunaMix")
