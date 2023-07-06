@@ -263,8 +263,8 @@ def make_code(vae, vae_url, output, output1, final_name, numi=None, inter=None, 
         fix += "%cd \{Model_Directory}\n\nfrom huggingface_hub import upload_file\nupload_file(path_or_fileobj=Upload_File, path_in_repo=Output_File, repo_id=User_Repository, token=Token)\nupload_file(path_or_fileobj=Upload_File_1, path_in_repo=Output_File_1, repo_id=User_Repository, token=Token)"
         ou.write(fix)
     print(f"Write mergition of {final_name} Using {count} models Successfully!")
-#hsg = random.randint(10,27)
+hsg = random.randint(10,27)
 
-make_code("vae-ft-mse-840000-ema-pruned.safetensors", "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors",\
-          "scripts.txt","mergitions.txt","LunaMixV2RAND",list(set([91837,91662,87533,29422,93529,88536,43331,10028,72745,47274,22402,58772,94725,81304,93589,94179,83766,52602,45757,33918])), \
-          "dump.json",Token="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", NameRepo="Chattiori/LunaMix")
+make_code("vae.ext", "vae url",\
+          "scripts.txt","mergitions.txt","RandomAttempt",hsg, \
+          "dump.json",Token="YourToken", NameRepo="Name/Repo")
