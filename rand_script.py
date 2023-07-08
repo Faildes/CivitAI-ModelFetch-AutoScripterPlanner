@@ -2,9 +2,20 @@ import json
 import random
 import os
 import re
+import numpy as np
+
+def calc_ratio(seed):
+    np.random.seed(seed)
+    ratios = np.random.uniform(0, 1, (1, 26))
+    ratios = ratios[0].tolist()
+    rev_ratios = [1 - rat for rat in ratios]
+    return rev_ratios, ratios
 
 filedict = {}
 pruned={}
+models = {}
+merged = {}
+blockid=["BASE","IN00","IN01","IN02","IN03","IN04","IN05","IN06","IN07","IN08","IN09","IN10","IN11","M00","OUT00","OUT01","OUT02","OUT03","OUT04","OUT05","OUT06","OUT07","OUT08","OUT09","OUT10","OUT11"]
 
 def select_models(out, ids, intr, safe=False, reject_tag=None, rej_name=None):
     global filedict
@@ -136,6 +147,8 @@ def custom_model(link,name,safetensors=0,prune=False):
         filedict[name] = [link, f"{name}.ckpt"]
 
 def make_script(vae, index, dicted, final, out):
+    global models
+    global merged
     file_a = None
     file_b = None
     file_c = None
@@ -178,31 +191,72 @@ def make_script(vae, index, dicted, final, out):
         stract_a = f"[{file_a_name}]({link_a})" if link_a is not None else f"{file_a_name}"
         stract_b = f"[{file_b_name}]({link_b})" if link_b is not None else f"{file_b_name}"
         forge += f"Weighted Sum, {stract_a} + {stract_b},"
+        model0 = [file_a_name]
+        if file_a_name in merged.keys():
+            model0 = merged[file_a_name]
+        else:
+            models[file_a_name] = [1]*26
+        model1 = [file_b_name]
+        if file_b_name in merged.keys():
+            model1 = merged[file_b_name]
+        else:
+            models[file_b_name] = [1]*26
     else:
         form += f"\"ST\" \"/content/models/\" \\\n\"{file_a}\" \"{file_b}\" --model_2 \"{file_c}\" \\\n--m0_name \"{file_a_name}\" --m1_name \"{file_b_name}\" --m2_name \"{file_c_name}\" \\\n"
         stract_a = f"[{file_a_name}]({link_a})" if link_a is not None else f"{file_a_name}"
         stract_b = f"[{file_b_name}]({link_b})" if link_b is not None else f"{file_b_name}"
         stract_c = f"[{file_c_name}]({link_c})" if link_c is not None else f"{file_c_name}"
         forge += f"Sum Twice, {stract_a} + {stract_b} + {stract_c},"
+        model0 = [file_a_name]
+        if file_a_name in merged.keys():
+            model0 = merged[file_a_name]
+        else:
+            models[file_a_name] = [1]*26
+        model1 = [file_b_name]
+        if file_b_name in merged.keys():
+            model1 = merged[file_b_name]
+        else:
+            models[file_b_name] = [1]*26
+        model2 = [file_c_name]
+        if file_c_name in merged.keys():
+            model2 = merged[file_c_name]
+        else:
+            models[file_c_name] = [1]*26
     form += form_b
     if files >= 2:
         seed = random.randint(1, 4294967295)
         form += f"\\\n--rand_alpha \"0, 1, {seed}\" "
         forge += f"rand_alpha(0.0, 1.0, {seed}) "
+        a0, a1 = calc_ratio(seed)
     if files == 3:
         seed = random.randint(1, 4294967295)
         form += f"--rand_beta \"0, 1, {seed}\" "
         forge += f"rand_beta(0.0, 1.0, {seed}) "
+        b0, b1 = calc_ratio(seed)
     form += form_c
     form += f"\"{filename}\"\n!pip cache purge\n\n"
     forge += f">> {filename}\n\n"
-
+    if files == 3:
+        for m in model0:
+            models[m] = [n * a0[i] * b0[i] for i, n in enumerate(models[m])]
+        for m in model1:
+            models[m] = [n * a1[i] * b0[i] for i, n in enumerate(models[m])]
+        for m in model2:
+            models[m] = [n * b1[i] for i, n in enumerate(models[m])]
+        merged[filename] = model0 + model1 + model2
+    elif files == 2:
+        for m in model0:
+            models[m] = [n * a0[i] for i, n in enumerate(models[m])]
+        for m in model1:
+            models[m] = [n * a1[i] for i, n in enumerate(models[m])]
+        merged[filename] = model0 + model1
     with open(out, mode="a+", errors="ignore") as op:
         op.write(forge)
     return form, exec_fin, dicted
 
 def make_code(vae, vae_url, output, output1, final_name, numi=None, inter=None, safer=False, rej_tag=None, rej_name=None,Token="YourToken",NameRepo="Name/Repo"):
     global filedict
+    global models
     i = 0
     finale = False
     if os.path.exists(os.path.join(os.getcwd(),output)):
@@ -263,6 +317,18 @@ def make_code(vae, vae_url, output, output1, final_name, numi=None, inter=None, 
         fix += "%cd \{Model_Directory}\n\nfrom huggingface_hub import upload_file\nupload_file(path_or_fileobj=Upload_File, path_in_repo=Output_File, repo_id=User_Repository, token=Token)\nupload_file(path_or_fileobj=Upload_File_1, path_in_repo=Output_File_1, repo_id=User_Repository, token=Token)"
         ou.write(fix)
     print(f"Write mergition of {final_name} Using {count} models Successfully!")
+    with open(output1, mode="a+") as tr:
+        for k, l in models.items():
+            kits = f"{k}: \n"
+            ger = kits
+            for i, n in enumerate(l):
+                lp = n*100
+                kits += f"{blockid[i]} = {lp:.02f}%, \n"
+                ger += f"{blockid[i]} = {lp:.02f}%, "
+            kits += "\n"
+            ger += "\n"
+            print(ger)
+            tr.write(kits)
 hsg = random.randint(10,27)
 
 make_code("vae.ext", "vae url",\
