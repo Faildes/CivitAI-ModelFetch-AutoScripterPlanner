@@ -3,6 +3,8 @@ import random
 import os
 import re
 import numpy as np
+import markdown as mk
+md = mk.Markdown()
 
 def calc_ratio(seed):
     np.random.seed(seed)
@@ -54,7 +56,7 @@ def select_models(out, ids, intr, safe=False, reject_tag=None, rej_name=None):
                     continue
                 author = st["creator_username"]
                 author_url = f"https://civitai.com/user/{author}"
-                terf = f"[{name}-{version}]({model_link}) by [{author}]({author_url})\n"
+                terf = f"* **[{name}-{version}]({model_link})** by **[{author}]({author_url})**\n"
                 oss.write(terf)
                 if form == "SafeTensor":
                     safetensors = 1
@@ -114,7 +116,7 @@ def select_models_rd(out, num, intr, safe=False, reject_tag=None, rej_name=None)
                     continue
                 author = st["creator_username"]
                 author_url = f"https://civitai.com/user/{author}"
-                terf = f"[{name}-{version}]({model_link}) by [{author}]({author_url})\n"
+                terf = f"* **[{name}-{version}]({model_link})** by **[{author}]({author_url})**\n"
                 oss.write(terf)
                 if form == "SafeTensor":
                     safetensors = 1
@@ -190,7 +192,7 @@ def make_script(vae, index, dicted, final, out):
         form += f"\"WS\" \"/content/models/\" \\\n\"{file_a}\" \"{file_b}\" \\\n--m0_name \"{file_a_name}\" --m1_name \"{file_b_name}\" \\\n"
         stract_a = f"[{file_a_name}]({link_a})" if link_a is not None else f"{file_a_name}"
         stract_b = f"[{file_b_name}]({link_b})" if link_b is not None else f"{file_b_name}"
-        forge += f"Weighted Sum, {stract_a} + {stract_b},"
+        forge += f"* Weighted Sum, **{stract_a}** + **{stract_b}**,"
         model0 = [file_a_name]
         if file_a_name in merged.keys():
             model0 = merged[file_a_name]
@@ -206,7 +208,7 @@ def make_script(vae, index, dicted, final, out):
         stract_a = f"[{file_a_name}]({link_a})" if link_a is not None else f"{file_a_name}"
         stract_b = f"[{file_b_name}]({link_b})" if link_b is not None else f"{file_b_name}"
         stract_c = f"[{file_c_name}]({link_c})" if link_c is not None else f"{file_c_name}"
-        forge += f"Sum Twice, {stract_a} + {stract_b} + {stract_c},"
+        forge += f"* Sum Twice, **{stract_a}** + **{stract_b}** + **{stract_c}**,"
         model0 = [file_a_name]
         if file_a_name in merged.keys():
             model0 = merged[file_a_name]
@@ -235,7 +237,7 @@ def make_script(vae, index, dicted, final, out):
         b0, b1 = calc_ratio(seed)
     form += form_c
     form += f"\"{filename}\"\n!pip cache purge\n\n"
-    forge += f">> {filename}\n\n"
+    forge += f">> **{filename}**\n\n"
     if files == 3:
         for m in model0:
             models[m] = [n * a0[i] * b0[i] for i, n in enumerate(models[m])]
@@ -254,7 +256,7 @@ def make_script(vae, index, dicted, final, out):
         op.write(forge)
     return form, exec_fin, dicted
 
-def make_code(vae, vae_url, output, output1, final_name, numi=None, inter=None, safer=False, rej_tag=None, rej_name=None,Token="YourToken",NameRepo="Name/Repo"):
+def make_code(vae, vae_url, output, output1, output2, final_name, numi=None, inter=None, safer=False, rej_tag=None, rej_name=None,Token="YourToken",NameRepo="Name/Repo"):
     global filedict
     global models
     i = 0
@@ -293,7 +295,7 @@ def make_code(vae, vae_url, output, output1, final_name, numi=None, inter=None, 
                 else:
                     tex += ")\n"
             ou.write(tex)
-        ou.write(f"\n!wget -c -O \"/content/vae/{vae}\" \"{vae_url}\"\n%cd /content/merge-models/\n\n")
+        ou.write(f"\n!aria2c --console-log-level=error -c -x 16 -s 16 -k 1M \"{vae_url}\" -d \"/content/vae/\" -o \"{vae}\"\n%cd /content/merge-models/\n\n")
         for key, base in pruned.items():
             if base[2] == 1:
                 nam = f"{key}.safetensors"
@@ -329,8 +331,13 @@ def make_code(vae, vae_url, output, output1, final_name, numi=None, inter=None, 
             ger += "\n"
             print(ger)
             tr.write(kits)
+    with open(output2, mode="a+") as tr:
+        with open(output1, mode="r") as rd:
+            k = "\n".join(rd.readlines())
+            te = md.convert(k)
+            tr.write(te)
 hsg = random.randint(10,27)
 
 make_code("vae.ext", "vae url",\
-          "scripts.txt","mergitions.txt","RandomAttempt",hsg, \
+          "script.txt","mergition.txt","merge.html","RandomAttempt",hsg, \
           "dump.json",Token="YourToken", NameRepo="Name/Repo")
