@@ -1,8 +1,8 @@
 #@title **Mergition**
-Token = "YourToken" #@param {type:"string"}
+Token = "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" #@param {type:"string"}
 !pip install torch safetensors
 !pip install pytorch_lightning
-!pip install wget
+!apt-get -y install -qq aria2
 
 import requests
 
@@ -23,7 +23,6 @@ def custom_model(url, checkpoint_name, format=0):
   elif format == 1:
     ext = "safetensors"
   if "huggingface" in url:
-    !wget -c --header={user_header} {url} -O /content/models/{checkpoint_name}.{ext}
+    !aria2c --console-log-level=error -c -x 16 -s 16 -k 1M --header={user_header} {url} -d "/content/models/" -o {checkpoint_name}.{ext}
   else:
-    !wget -c -O /content/models/{checkpoint_name}.{ext} {url}
-
+    !aria2c --console-log-level=error -c -x 16 -s 16 -k 1M {url} -d "/content/models/" -o {checkpoint_name}.{ext}
