@@ -1,4 +1,6 @@
 # CivitAI-ModelFetch-RandomScripter
+Install `markdown` with using pip.
+
 Fetch and dump json of model datas from CivitAI and make script to merge models randomly
 
 Use `database_fetch.py` to get the data.
