@@ -228,7 +228,7 @@ def select_models_rd(num, intr, safe=False, reject_tag=None, rej_name=None):
                 fulldict[f"{idm}"] = [url, f"{name}-{version}.ckpt",model_link,ori]
             i += 1
 
-def make_script(vae, model_s, dicted, named, out, alpha, beta):
+def make_script(prune_id,vae, model_s, dicted, named, out, alpha, beta):
     global models
     global merged
     global fulldict
@@ -247,18 +247,27 @@ def make_script(vae, model_s, dicted, named, out, alpha, beta):
         st_a = dicted.pop(model_s[0])
         file_a = st_a[1]
         file_a_name = st_a[3]
+        if model_s[0] in prune_id:
+            file_a = re.sub(r"[ \(\)\'\"]","",file_a_name) + "-pruned.safetensors"
+            file_a_name += "-pruned"
         link_a = st_a[2]
         files = 1
     if len(model_s) >= 2:
         st_b = dicted.pop(model_s[1])
         file_b = st_b[1]
         file_b_name = st_b[3]
+        if model_s[1] in prune_id:
+            file_b = re.sub(r"[ \(\)\'\"]","",file_b_name) + "-pruned.safetensors"
+            file_b_name += "-pruned"
         link_b = st_b[2]
         files = 2
     if len(model_s) >= 3:
         st_c = dicted.pop(model_s[2])
         file_c = st_c[1]
         file_c_name = st_c[3]
+        if model_s[2] in prune_id:
+            file_c = re.sub(r"[ \(\)\'\"]","",file_c_name) + "-pruned.safetensors"
+            file_c_name += "-pruned"
         link_c = st_c[2]
         files = 3
     filename = named
@@ -379,7 +388,7 @@ def make_code(vae, vae_url, output, output1, output2, final_name, numi=None, int
                     name = re.sub(r"[ \(\)\'\"]","",base[3])
                     pr_l.append(name)
                     basic = pruned[name]
-                    tex = f"custom_model(\"{basic[0]}\", \"{basic[1]}\""
+                    tex = f"custom_model(\"{basic[0]}\", \"{name}\""
                     if basic[2] == 1:
                         tex += ",1)\n"
                     else:
@@ -410,7 +419,7 @@ def make_code(vae, vae_url, output, output1, output2, final_name, numi=None, int
                 alpha_beta = splbase[2].split("|")
                 alpha = alpha_beta[0].split(":")
                 beta = alpha_beta[1].split(":")
-                scr, fullydict = make_script(vae, modelr, fullydict, out_name, output1, alpha, beta)
+                scr, fullydict = make_script(prune_id,vae, modelr, fullydict, out_name, output1, alpha, beta)
                 ou.write(scr)
         fix = f"!python merge.py \"RM\" \"/content/models/\" \\\n\"{final_name}.safetensors\" None --output \"{final_name}-recipe\"\n!pip cache purge\n\n"
         fix+= "!pip install --upgrade huggingface_hub\n\nModel_Directory = \"/content/models/\" #@param {type:\"string\"}\n"
