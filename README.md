@@ -7,4 +7,7 @@ Use `database_fetch.py` to get the data.
 
 Use `scripter.py` from IDLE to make the script.
 
-Copy data of `scripts.txt`(default) to Colab Notebook and copy data of `mergitions.txt`(default) to HuggingFace's Destination Repo.
+Copy data of `scripts.txt`(default) to Colab Notebook, `mergitions.txt`(default) to HuggingFace's Destination Repo and `merge.html` to CivitAI's Discription.
+
+## Credits
+* [sn3akiwhizper](https://github.com/sn3akiwhizper) for [CivitAI-Local-Database](https://github.com/sn3akiwhizper/civitai-local-database)
