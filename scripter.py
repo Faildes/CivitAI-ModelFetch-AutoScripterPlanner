@@ -137,6 +137,66 @@ def select_models(ids, intr, safe=False, reject_tag=None, rej_name=None):
                 filedict[f"{name}-{version}"] = [url, f"{name}-{version}.ckpt",model_link]
                 fulldict[f"{idm}"] = [url, f"{name}-{version}.ckpt",model_link,ori]
 
+def select_models_dict(dicted, intr, safe=False, reject_tag=None, rej_name=None):
+    global filedict
+    global fulldict
+    global pruned
+    global credit
+    pr = 0
+    h = 0.0
+    with open(intr,mode="r") as ss:
+        k = json.load(ss)
+        ids = []
+        for s in dicted.values():
+            ids += [k for k in s.split(",")[1].split("+") if "TEMP" not in k]
+        ids = list(set(ids))
+        for idm in ids:
+            st = k.pop(str(idm))
+            model_link = f"https://civitai.com/models/{str(idm)}/"
+            name = st["name"]
+            if rej_name is not None:
+                if any([re.search(s, name, flags=re.IGNORECASE) for s in rej_name]):
+                    continue
+            tag=st["tags"]
+            if reject_tag is not None:
+                if type(reject_tag) is str:
+                    if reject_tag in tag:
+                        continue
+                elif type(reject_tag) is list:
+                    if set(tag) & set(reject_tag):
+                        continue
+            version = st["model_versions_name"]
+            url = st["model_versions_download_url"]
+            size = st["model_versions_files_size_kb"]
+            if float(size) >= 7000000.000000000:
+                continue
+            h += float(size)
+            form = st["model_versions_files_format"]["format"]
+            if form != "SafeTensor" and safe:
+                continue
+            author = st["creator_username"]
+            author_url = f"https://civitai.com/user/{author}"
+            terf = f"* **[{name}-{version}]({model_link})** by **[{author}]({author_url})**\n"
+            ori = f"{name}-{version}"
+            credit[ori] = terf
+            if form == "SafeTensor":
+                safetensors = 1
+            else:
+                safetensors = 0
+            name = re.sub(r"[ \(\)\'\"]","",name)
+            version = re.sub(r"[ \(\)\'\"]","",version)
+            if size >= 3000000.000000000:
+                pr += 1
+                pruned[f"{name}-{version}"] = [url,f"{name}-{version}-pruned",safetensors]
+                safetensors = 1
+                version = f"{version}-pruned"
+            if safetensors == 1:
+                filedict[f"{name}-{version}"] = [url, f"{name}-{version}.safetensors",model_link]
+                fulldict[f"{idm}"] = [url, f"{name}-{version}.safetensors",model_link,ori]
+            else:
+                filedict[f"{name}-{version}"] = [url, f"{name}-{version}.ckpt",model_link]
+                fulldict[f"{idm}"] = [url, f"{name}-{version}.ckpt",model_link,ori]
+                
 def make_dict(index, dicted, todict, final):
     exec_fin = False
     if len(dicted) >= 1:
@@ -362,6 +422,11 @@ def make_code(vae, vae_url, output, output1, output2, final_name, numi=None, int
     elif type(numi) == list:
         select_models(ids=numi, intr=inter, safe=safer, reject_tag=rej_tag, rej_name=rej_name)
         count = len(numi)
+    elif type(numi) == dict:
+        select_models_dict(dicted=numi, intr=inter, safe=safer, reject_tag=rej_tag, rej_name=rej_name)
+        mdict = numi
+        finale = True
+        count = len(list(fulldict.keys()))
     terfull = list(fulldict.keys())
     while finale is False:
         mdict, terfull, finale = make_dict(i, terfull, mdict, final_name)
