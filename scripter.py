@@ -197,8 +197,10 @@ def select_models_dict(dicted, intr, safe=False, reject_tag=None, rej_name=None)
                 filedict[f"{name}-{version}"] = [url, f"{name}-{version}.ckpt",model_link]
                 fulldict[f"{idm}"] = [url, f"{name}-{version}.ckpt",model_link,ori]
                 
-def make_dict(index, dicted, todict, final):
+def make_dict(index, dicted, todict, max_min, final):
     exec_fin = False
+    mins = float(max_min[0])
+    maxs = float(max_min[1])
     if len(dicted) >= 1:
         file_a = random.choice(list(dicted))
         dicted.remove(file_a)
@@ -222,9 +224,9 @@ def make_dict(index, dicted, todict, final):
         filename = f"TEMP_{index}"
         dicted.append(filename)
     if files == 2:
-        todict[filename] = f"{mode},{file_a}+{file_b},0.0:1.0:{seed_a}"
+        todict[filename] = f"{mode},{file_a}+{file_b},{mins:.02f}:{maxs:.02f}:{seed_a}"
     else:
-        todict[filename] = f"{mode},{file_a}+{file_b}+{file_c},0.0:1.0:{seed_a}|0.0:1.0:{seed_b}"
+        todict[filename] = f"{mode},{file_a}+{file_b}+{file_c},{mins:.02f}:{maxs:.02f}:{seed_a}|{mins:.02f}:{maxs:.02f}:{seed_b}"
     return todict, dicted, exec_fin
     
 def select_models_rd(num, intr, safe=False, reject_tag=None, rej_name=None):
@@ -401,7 +403,7 @@ def make_script(prune_id,vae, model_s, dicted, named, out, alpha, beta):
         merged[filename] = model0 + model1
     return form, dicted
 
-def make_code(vae, vae_url, output, output1, output2, final_name, numi=None, inter=None, safer=False, rej_tag=None, rej_name=None,Token="YourToken",NameRepo="Name/Repo"):
+def make_code(vae, vae_url, output, output1, output2, final_name, numi=None, abc=[0, 1], inter=None, safer=False, rej_tag=None, rej_name=None,Token="YourToken",NameRepo="Name/Repo"):
     global filedict
     global fulldict
     global models
@@ -429,7 +431,7 @@ def make_code(vae, vae_url, output, output1, output2, final_name, numi=None, int
         count = len(list(fulldict.keys()))
     terfull = list(fulldict.keys())
     while finale is False:
-        mdict, terfull, finale = make_dict(i, terfull, mdict, final_name)
+        mdict, terfull, finale = make_dict(i, terfull, mdict, abc, final_name)
         i += 1
     model_d = calculate_size(mdict, inter)
     with open(output1, mode="a+") as tr:
