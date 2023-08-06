@@ -565,8 +565,3 @@ def make_code(vae, vae_url, output, output1, output2, final_name, numi=None, abc
             k = "\n".join(rd.readlines())
             te = md.convert(k)
             tr.write(te)
-hsg = random.randint(10,27)
-
-make_code("vae.ext", "vae url",\
-          "script.txt","mergition.txt","merge.html","RandomAttempt",hsg, \
-          "dump.json",Token="YourToken", NameRepo="Name/Repo")
