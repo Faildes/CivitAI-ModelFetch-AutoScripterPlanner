@@ -5,7 +5,7 @@ Install `markdown` and `gooey` with using pip.
 
 Use `database_fetch.py` to get the data.
 
-Use `merge_recipe.py` from IDLE to make the script.
+Use `make_recipe.py` from IDLE to make the script.
 
 Copy data of `scripts.txt`(default) to Colab Notebook, `merge.txt`(default) to HuggingFace's Destination Repo and `merge.html` to CivitAI's Discription.
 
